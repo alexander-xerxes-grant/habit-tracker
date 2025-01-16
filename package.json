@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "start" : "cd frontend && npm start"
   },
   "keywords": [],
   "author": "",
