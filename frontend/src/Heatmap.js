@@ -23,7 +23,7 @@ const Heatmap = () => {
         firstDayOfWeek: firstDay.getDay(),
         startDay: Math.floor((firstDay - new Date(2025, 0, 1)) / (1000 * 60 * 60 * 24))
       };
-    };
+    }
 
     // Calculate total width including month padding
     const totalWeeks = months.reduce((acc, month) => {
