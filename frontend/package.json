@@ -34,20 +34,12 @@
     "format": "prettier --write 'src/**/*.{js.jsx}'",
     "lint": "eslint 'src/**/*.{js,jsx}'",
     "prepare": "husky",
-    "lint-staged": "lint-staged",
+    "lint-staged": "lint-staged"
   },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  },
-  "lint-staged": {
-      "src/**/*.{js,jsx,ts,tsx,json,css}": [
-          "prettier --write",
-          "eslint --fix src/",
-          "tslint --fix --project .",
-          "git add"
-      ]
   },
   "eslintConfig": {
     "extends": [
