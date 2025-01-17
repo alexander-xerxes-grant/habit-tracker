@@ -43,6 +43,7 @@ const Heatmap = () => {
     const today = new Date();
     const yearStart = new Date(2025, 0, 1);
     const dayIndex = Math.floor((today - yearStart) / (1000 * 60 * 60 * 24));
+    // if (dayIndex < 0) dayIndex = 0;
 
     // Calculate position considering month alignment
     const getPosition = (dayNumber) => {
