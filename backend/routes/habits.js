@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
 
 try {
     const newHabit = await habit.save();
-    res.statue(201).json(newHabit);
+    res.status(201).json(newHabit);
 } catch (error) {
     res.status(400).json({ message: error.message });
 }
