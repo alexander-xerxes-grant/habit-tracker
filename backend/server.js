@@ -12,7 +12,10 @@ app.use(express.json());
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+    .catch(err => {
+        console.log('MongoDB connection error, but starting server anyway');
+        console.log(err);
+    });
 
 // Routes
 const habitRoutes = require('./routes/habits');
@@ -20,5 +23,5 @@ app.use('/api/habits', habitRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log('Server running on port ${PORT}');
+    console.log(`Server running on port ${PORT}`);
 });
