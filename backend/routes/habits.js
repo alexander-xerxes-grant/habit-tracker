@@ -75,3 +75,36 @@ router.delete('/:id', async (req, res) => {
   }
 });
 module.exports = router;
+
+
+// Mark today's date as completed for a given habit
+router.put('/:id/toggle', async (req, res) => {
+  try {
+    const habit = await Habit.findById(req.params.id);
+    if (!habit) {
+      return res.status(404).json({ message: 'Habit not found' });
+    }
+
+    const dateToToggle = req.body.date ? new Date(req.body.date) : new Date();
+    const dayString = dateToToggle.toDateString();
+
+    // Check if it's already in completedDates
+    const index = habit.completedDates.findIndex(
+      (d) => new Date(d).toDateString() === dayString
+    );
+
+    if (index === -1) {
+      // not completed yet => add it
+      habit.completedDates.push(dateToToggle);
+    } else {
+      // already completed => remove it
+      habit.completedDates.splice(index, 1);
+    }
+
+    await habit.save();
+    res.json(habit);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+

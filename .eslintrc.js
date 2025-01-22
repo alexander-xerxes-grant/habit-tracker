@@ -1,17 +1,42 @@
 module.exports = {
   root: true,
-  env: { es2021: true },
+  env: {
+    node: true, // ensure "module" etc. are recognized
+    es2021: true,
+  },
+  parserOptions: { ecmaVersion: 'latest' },
+  extends: [
+    'eslint:recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
+    'prettier',
+  ],
+  settings: {
+    react: { version: 'detect' },
+  },
   overrides: [
-    // Backend (Node) override
+    // Node backend
     {
       files: ['backend/**/*.js'],
       env: { node: true },
       parserOptions: { sourceType: 'script' },
     },
-    // Frontend (React) override
+    // React frontend
     {
       files: ['frontend/src/**/*.{js,jsx}'],
       env: { browser: true },
-      extends: ['eslint:recommended', 'plugin:react/recommended'],}
+      parserOptions: {
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true },
+      },
+      rules: {
+        'react/react-in-jsx-scope': 'off',
+      },
+    },
+    // Tailwind config (Node)
+    {
+      files: ['frontend/tailwind.config.js'],
+      env: { node: true },
+    },
   ],
 };

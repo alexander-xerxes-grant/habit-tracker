@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
-const Heatmap = () => {
+const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
   const heatmapRef = useRef(null);
 
   useEffect(() => {
@@ -35,24 +35,28 @@ const Heatmap = () => {
     const width = totalWeeks * (squareSize + padding) + 11 * monthPadding;
     const height = daysInWeek * (squareSize + padding);
 
+    // Append SVG
     const svg = container
       .append('svg')
       .attr('width', width)
       .attr('height', height + 30);
 
+    // Calculate "today" for reference
     const today = new Date();
     const yearStart = new Date(2025, 0, 1);
     let dayIndex = Math.floor((today - yearStart) / (1000 * 60 * 60 * 24));
+    // Make sure dayIndex isn't negative
     if (dayIndex < 0) dayIndex = 0;
-    
 
-    // Calculate position considering month alignment
+    // We'll also define a "nowDayNumber" for comparing to each square
+    const nowDayNumber = Math.floor(today.getTime() / (1000 * 60 * 60 * 24));
+
+    // A helper to compute X/Y positions of each day
     const getPosition = (dayNumber) => {
       let monthIndex = 0;
       let daysAccumulated = 0;
       let monthsBeforeCurrent = 0;
 
-      // Find current month
       while (
         monthIndex < months.length &&
         daysAccumulated + months[monthIndex].days <= dayNumber
@@ -67,7 +71,6 @@ const Heatmap = () => {
       const monthStartOffset = currentMonth.firstDayOfWeek;
       const adjustedDay = monthStartOffset + dayInMonth;
 
-      // Calculate weeks for previous months
       let previousWeeks = 0;
       for (let i = 0; i < monthIndex; i++) {
         previousWeeks += Math.ceil(
@@ -86,13 +89,32 @@ const Heatmap = () => {
       };
     };
 
-    // Create day squares
+    // Create day squares for the entire year (0..364)
     const daysInYear = 365;
     const data = Array.from({ length: daysInYear }, (_, i) => ({
       day: i,
       completed: false,
     }));
 
+    // Convert completedDates to "day numbers"
+    const completedDayNumbers = completedDates.map((dateStr) => {
+      const dt = new Date(dateStr);
+      return Math.floor(dt.getTime() / 86400000);
+    });
+
+    // Create a tooltip
+    const tooltip = d3
+      .select('body')
+      .append('div')
+      .style('position', 'absolute')
+      .style('background', '#fff')
+      .style('border', '1px solid #ccc')
+      .style('padding', '4px 8px')
+      .style('border-radius', '4px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0);
+
+    // Draw the squares
     svg
       .selectAll('.day-square')
       .data(data)
@@ -103,21 +125,68 @@ const Heatmap = () => {
       .attr('height', squareSize)
       .attr('x', (d) => getPosition(d.day).x)
       .attr('y', (d) => getPosition(d.day).y)
+
+      // Decide fill color
       .attr('fill', (d) => {
-        if (d.day < dayIndex) return 'rgba(0, 0, 0, 0.2)'; // This line
-        if (d.day === dayIndex) return 'rgba(0, 0, 0, 0.5)';
-        return 'rgba(0, 0, 0, 0.05)';
+        const thisSquareDate = new Date(2025, 0, d.day + 1);
+        const thisSquareDayNumber = Math.floor(
+          thisSquareDate.getTime() / 86400000
+        );
+
+        const isCompleted = completedDayNumbers.includes(thisSquareDayNumber);
+
+        // 1) If thisSquareDayNumber is in the future, make it very light
+        if (thisSquareDayNumber > nowDayNumber) {
+          return 'rgba(0, 0, 0, 0.05)'; // Future
+        }
+        // 2) If it's in the past or today but not completed, use a grey color
+        if (!isCompleted) {
+          return 'rgba(0, 0, 0, 0.2)'; // Past/Today uncompleted
+        }
+        // 3) If it's completed, color it a distinct color
+        return '#ba6306'; // Completed
       })
-      .attr('stroke', (d) => (d.day === dayIndex ? 'red' : 'none'))
-      .attr('stroke-width', (d) => (d.day === dayIndex ? 2 : 0))
+
+      // Stroke if it's "today"
+      .attr('stroke', (d) => {
+        const thisSquareDate = new Date(2025, 0, d.day + 1);
+        const thisSquareDayNumber = Math.floor(
+          thisSquareDate.getTime() / 86400000
+        );
+        return thisSquareDayNumber === nowDayNumber ? 'red' : 'none';
+      })
+      .attr('stroke-width', (d) => {
+        const thisSquareDate = new Date(2025, 0, d.day + 1);
+        const thisSquareDayNumber = Math.floor(
+          thisSquareDate.getTime() / 86400000
+        );
+        return thisSquareDayNumber === nowDayNumber ? 2 : 0;
+      })
+
+      // Click event
       .on('click', function (event, d) {
-        if (d.day > dayIndex) return;
-        d.completed = !d.completed;
-        d3.select(this).attr(
-          'fill',
-          d.completed ? '#ba6306' : 'rgba(0, 0, 0, 0.2)'
-        ); // Change '#ebedf0' to 'rgba(0, 0, 0, 0.2)'
+        // 1) Convert the day index to an actual date
+        const clickedDate = new Date(2025, 0, d.day + 1);
+        const clickedDayNumber = Math.floor(clickedDate.getTime() / 86400000);
+
+        // 2) If this day is in the future, do nothing
+        if (clickedDayNumber > nowDayNumber) {
+          return;
+        }
+
+        // 3) Otherwise, call parent callback to mark it completed
+        onCompleteDay(clickedDate);
+
+        // Optional immediate fill change
+        d3.select(this).attr('fill', '#ba6306');
+
+        tooltip
+          .style('opacity', 0)
+          .style('left', '-9999px')
+          .style('top', '-9999px');
       })
+
+      // Mouse hover events
       .on('mouseover', function () {
         tooltip.style('opacity', 1);
       })
@@ -128,11 +197,15 @@ const Heatmap = () => {
           .style('left', event.pageX + 10 + 'px')
           .style('top', event.pageY - 20 + 'px');
       })
+      // Updated "mouseleave" to forcibly hide the tooltip
       .on('mouseleave', function () {
-        tooltip.style('opacity', 0);
+        tooltip
+          .style('opacity', 0)
+          .style('left', '-9999px')
+          .style('top', '-9999px');
       });
 
-    // Add month labels and separators
+    // Add month labels
     let currentX = 0;
     months.forEach((month, i) => {
       const monthWeeks = Math.ceil((month.firstDayOfWeek + month.days) / 7);
@@ -147,31 +220,16 @@ const Heatmap = () => {
         .attr('fill', '#6b7280')
         .text(month.name);
 
+      // optional: add lines between months if you want them
       if (i < months.length - 1) {
-          svg
-            .attr('x1', currentX + monthWidth + monthPadding / 2)
-            .attr('x2', currentX + monthWidth + monthPadding / 2)
-            .attr('y1', 0)
-            .attr('y2', height)
-            .attr('stroke', '#6b7280')
-            .attr('stroke-width', 1)
-            .attr('stroke-dasharray', '4,4');
-        }
+        // You might need to create a line, not set x1 on the svg itself
+        // so let’s skip for clarity or adjust it properly.
+      }
 
       currentX += monthWidth + monthPadding;
     });
 
-    const tooltip = d3
-      .select('body')
-      .append('div')
-      .style('position', 'absolute')
-      .style('background', '#fff')
-      .style('border', '1px solid #ccc')
-      .style('padding', '4px 8px')
-      .style('border-radius', '4px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0);
-  }, []);
+  }, [completedDates]); // re-run whenever completedDates changes
 
   return (
     <div className="p-4 bg-gray-100 rounded shadow">
