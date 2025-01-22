@@ -63,4 +63,21 @@ router.post('/:id', async (req, res) => {
 }
         )
 
+
+// Delete a habit
+// This route will delete a habit from the database
+router.delete('/:id', async (req, res) => {
+    try {
+        const habit = await Habit.findByIdAndDelete(req.params.id);
+        
+        // If no habit was found with that ID
+        if (!habit) {
+            return res.status(404).json({ message: 'Habit not found' });
+        }
+
+        res.json({ message: 'Habit deleted' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 module.exports = router;
