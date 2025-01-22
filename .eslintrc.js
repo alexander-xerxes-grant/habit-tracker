@@ -1,33 +1,17 @@
 module.exports = {
-    root: true,
-    overrides: [
-      // Frontend rules
-      {
-        files: ['frontend/**/*.{js,jsx}'],
-        env: {
-          browser: true
-        },
-        extends: [
-          'eslint:recommended',
-          'plugin:react/recommended',
-          'prettier'
-        ],
-        settings: {
-          react: {
-            version: '19.0'
-          }
-        }
-      },
-      // Backend rules
-      {
-        files: ['backend/**/*.js'],
-        env: {
-          node: true
-        },
-        extends: [
-          'eslint:recommended',
-          'prettier'
-        ]
-      }
-    ]
-  };
+  root: true,
+  env: { es2021: true },
+  overrides: [
+    // Backend (Node) override
+    {
+      files: ['backend/**/*.js'],
+      env: { node: true },
+      parserOptions: { sourceType: 'script' },
+    },
+    // Frontend (React) override
+    {
+      files: ['frontend/src/**/*.{js,jsx}'],
+      env: { browser: true },
+      extends: ['eslint:recommended', 'plugin:react/recommended'],}
+  ],
+};
