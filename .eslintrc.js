@@ -4,7 +4,7 @@ module.exports = {
     node: true,
     es2021: true,
   },
-  extends: ['eslint:recommended', 'prettier'],
+  extends: ['eslint:recommended'],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
@@ -23,7 +23,7 @@ module.exports = {
       ],
       settings: {
         react: {
-          version: 'detect',
+          version: '19.0.0',
         },
       },
       rules: {
@@ -36,6 +36,7 @@ module.exports = {
       env: {
         node: true,
       },
+      extends: ['eslint:recommended', 'prettier'],
     },
   ],
 };

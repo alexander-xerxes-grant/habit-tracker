@@ -8,7 +8,7 @@
     "start" : "cd frontend && npm start",
     "lint": "eslint .",
     "lint-fix": "eslint . --fix",
-    "format": "prettier --write '**/*.{js.jsx}'"
+    "format": "prettier --write '**/*.{js,jsx}'"
   },
   "keywords": [],
   "author": "",
