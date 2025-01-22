@@ -37,7 +37,7 @@ router.post('/', async (req, res) => {
 // This route will update a habit in the database
 // We use the :id parameter to specify which habit to update
 // id will be passed in the URL
-router.post('/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const updatedHabit = await Habit.findByIdAndUpdate(
       req.params.id,

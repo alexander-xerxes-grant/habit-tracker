@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Heatmap from './Heatmap';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api/habits';
 
 const HabitContainer = () => {
-  const [habits, setHabits] = useState([
-    { id: Date.now(), name: 'Default Habit' },
-  ]);
+  const [habits, setHabits] = useState([]);
+
+  useEffect(() => {
+    const fetchHabits = async () => {
+      try {
+        const response = await axios.get(API_URL);
+        console.log('API Response:', response.data);
+        setHabits(response.data)
+      } catch (error) {
+        console.error('Error fetching habits:', error)
+      }
+      
+    };
+
+    fetchHabits();
+  }, []);
 
   const addHabit = () => {
     const newHabit = {

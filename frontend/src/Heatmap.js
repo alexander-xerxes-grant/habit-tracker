@@ -42,8 +42,9 @@ const Heatmap = () => {
 
     const today = new Date();
     const yearStart = new Date(2025, 0, 1);
-    const dayIndex = Math.floor((today - yearStart) / (1000 * 60 * 60 * 24));
-    // if (dayIndex < 0) dayIndex = 0;
+    let dayIndex = Math.floor((today - yearStart) / (1000 * 60 * 60 * 24));
+    if (dayIndex < 0) dayIndex = 0;
+    
 
     // Calculate position considering month alignment
     const getPosition = (dayNumber) => {
@@ -147,15 +148,15 @@ const Heatmap = () => {
         .text(month.name);
 
       if (i < months.length - 1) {
-        svg
-          .attr('x1', currentX + monthWidth + monthPadding / 2)
-          .attr('x2', currentX + monthWidth + monthPadding / 2)
-          .attr('y1', 0)
-          .attr('y2', height)
-          .attr('stroke', '#6b7280')
-          .attr('stroke-width', 1)
-          .attr('stroke-dasharray', '4,4');
-      }
+          svg
+            .attr('x1', currentX + monthWidth + monthPadding / 2)
+            .attr('x2', currentX + monthWidth + monthPadding / 2)
+            .attr('y1', 0)
+            .attr('y2', height)
+            .attr('stroke', '#6b7280')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '4,4');
+        }
 
       currentX += monthWidth + monthPadding;
     });
