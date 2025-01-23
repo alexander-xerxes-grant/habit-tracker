@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Heatmap from './Heatmap';
 import axios from 'axios';
 
@@ -113,13 +113,13 @@ const HabitContainer = () => {
 
       <div className="space-y-8">
         {habits.map((habit) => (
-          <div key={habit.id} className="bg-white p-4 rounded-lg shadow">
+          <div key={habit._id} className="bg-white p-4 rounded-lg shadow">
             <input
               type="text"
               value={habit.name}
               onChange={(e) => {
                 const updatedHabits = habits.map((h) =>
-                  h.id === habit.id ? { ...h, name: e.target.value } : h
+                  h.id === habit._id ? { ...h, name: e.target.value } : h
                 );
                 setHabits(updatedHabits);
               }}
@@ -136,7 +136,7 @@ const HabitContainer = () => {
                 Streak: {calculateStreak(habit.completedDates)} days
               </span>
             </div>
-            <div key={`heatmap-${habit.id}`}>
+            <div key={`heatmap-${habit._id}`}>
               <Heatmap
                 habitId={habit._id}
                 completedDates={habit.completedDates}

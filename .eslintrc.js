@@ -7,8 +7,8 @@ module.exports = {
   parserOptions: { ecmaVersion: 'latest' },
   extends: [
     'eslint:recommended',
-    // 'plugin:react/recommended',
-    // 'plugin:react-hooks/recommended',
+    'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
     'prettier',
   ],
   settings: {
@@ -30,6 +30,7 @@ module.exports = {
         ecmaFeatures: { jsx: true },
       },
       rules: {
+        'react/jsx-uses-react': 'off',
         'react/react-in-jsx-scope': 'off',
         'react/prop-types': 'off',
       },

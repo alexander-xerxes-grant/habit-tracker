@@ -2,12 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add after your existing .heatmap-container styles */
+.day-square {
+  position: relative;
+  overflow: visible;
+}
+
+@keyframes ripple-effect {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(10);
+    opacity: 0.375;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(35);
+    opacity: 0;
+  }
+}
+
+.heatmap-ripple {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: rgba(186, 99, 6, 0.4);
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: ripple-effect 0.9s ease forwards;
+  z-index: 10;
+}
+
+/* Update your existing heatmap-container class to include these properties */
 .heatmap-container {
   width: 100%;
   height: 300px;
   background-color: white;
-  border: 1px solid #e5e7eb; /* Light gray border */
+  border: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  overflow: hidden;
 }

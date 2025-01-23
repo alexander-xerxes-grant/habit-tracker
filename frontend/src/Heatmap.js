@@ -1,11 +1,62 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 
 const Heatmap = ({ completedDates, onCompleteDay }) => {
   const heatmapRef = useRef(null);
   const tooltipRef = useRef(null);
+  const svgRef = useRef(null);
+  const [rippleCoords, setRippleCoords] = useState({ x: -1, y: -1 });
+  const [isRippling, setIsRippling] = useState(false);
 
   useEffect(() => {
+    if (rippleCoords.x !== -1 && rippleCoords.y !== -1) {
+      setIsRippling(true);
+      setTimeout(() => setIsRippling(false), 900);
+    }
+  }, [rippleCoords]);
+
+  useEffect(() => {
+    if (!isRippling) {
+      setRippleCoords({ x: -1, y: -1 });
+    }
+  }, [isRippling]);
+
+  useEffect(() => {
+    const squareSize = 15;
+    const padding = 2;
+    const monthPadding = 15;
+    const daysInWeek = 7;
+
+    // Calculate month data including first day of week
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const firstDay = new Date(2025, i, 1);
+      const lastDay = new Date(2025, i + 1, 0);
+      return {
+        name: firstDay.toLocaleString('default', { month: 'short' }),
+        days: lastDay.getDate(),
+        firstDayOfWeek: firstDay.getDay(),
+        startDay: Math.floor(
+          (firstDay - new Date(2025, 0, 1)) / (1000 * 60 * 60 * 24)
+        ),
+      };
+    });
+
+    // Calculate total width including month padding
+    const totalWeeks = months.reduce((acc, month) => {
+      return acc + Math.ceil((month.firstDayOfWeek + month.days) / 7);
+    }, 0);
+
+    const width = totalWeeks * (squareSize + padding) + 11 * monthPadding;
+    const height = daysInWeek * (squareSize + padding);
+
+    const svg = d3
+      .select(heatmapRef.current)
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height + 30);
+
+    svgRef.current = svg; // Store SVG reference
+
     // Create a tooltip when component mounts
     const tooltip = d3
       .select('body')
@@ -34,11 +85,6 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     const container = d3.select(heatmapRef.current);
     container.selectAll('*').remove();
 
-    const squareSize = 15;
-    const padding = 2;
-    const monthPadding = 15;
-    const daysInWeek = 7;
-
     // Define a constant for the corner radius ratio
     const CORNER_RADIUS_RATIO = 0.2; // 20% of square size
 
@@ -48,34 +94,6 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       // Math.max ensures we never go below 1 pixel
       return Math.max(1, Math.round(size * CORNER_RADIUS_RATIO));
     };
-
-    // Calculate month data including first day of week
-    const months = Array.from({ length: 12 }, (_, i) => {
-      const firstDay = new Date(2025, i, 1);
-      const lastDay = new Date(2025, i + 1, 0);
-      return {
-        name: firstDay.toLocaleString('default', { month: 'short' }),
-        days: lastDay.getDate(),
-        firstDayOfWeek: firstDay.getDay(),
-        startDay: Math.floor(
-          (firstDay - new Date(2025, 0, 1)) / (1000 * 60 * 60 * 24)
-        ),
-      };
-    });
-
-    // Calculate total width including month padding
-    const totalWeeks = months.reduce((acc, month) => {
-      return acc + Math.ceil((month.firstDayOfWeek + month.days) / 7);
-    }, 0);
-
-    const width = totalWeeks * (squareSize + padding) + 11 * monthPadding;
-    const height = daysInWeek * (squareSize + padding);
-
-    // Append SVG
-    const svg = container
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height + 30);
 
     // Calculate "today" for reference
     const today = new Date();
@@ -138,24 +156,21 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       return Math.floor(dt.getTime() / 86400000);
     });
 
-    const RIPPLE_DURATION = 5000; // Duration of ripple in milliseconds
+    const RIPPLE_DURATION = 1000; // Duration of ripple in milliseconds
     const RIPPLE_COLOR = '#ba6306'; // Use your existing completed color
-    const MAX_RIPPLE_DISTANCE = 1000; // How many squares away the ripple should travel
+    const MAX_RIPPLE_DISTANCE = 10; // How many squares away the ripple should travel
 
     const calculateSquareDistance = (square1, square2) => {
-      // Calculate row and column differences
-      const week1 = Math.floor(square1.day / 7);
-      const day1 = square1.day % 7;
-      const week2 = Math.floor(square2.day / 7);
-      const day2 = square2.day % 7;
-      
-      // Calculate direct distance in grid units
-      const dx = week2 - week1;
-      const dy = day2 - day1;
-      
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      console.log(`Distance from day ${square1.day} to ${square2.day}: ${distance}`);
-      return distance;
+      // Get the X/Y positions of each square
+      const pos1 = getPosition(square1.day);
+      const pos2 = getPosition(square2.day);
+
+      // Calculate the Euclidean distance
+      const dx = pos1.x - pos2.x;
+      const dy = pos1.y - pos2.y;
+
+      // Normalize by square size to get unit distance
+      return Math.sqrt(dx * dx + dy * dy) / (squareSize + padding);
     };
 
     // Draw the squares
@@ -164,6 +179,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       .data(data)
       .enter()
       .append('rect')
+      .attr('class', (d) => `day-square day-square-${d.day}`)
       .attr('class', 'day-square')
       .attr('width', squareSize)
       .attr('height', squareSize)
@@ -209,52 +225,63 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
         return thisSquareDayNumber === nowDayNumber ? 2 : 0;
       })
 
-      .on('click', function(event, d) {
+      .on('click', function (event, d) {
         hideTooltip();
-      
+
         const clickedDate = new Date(2025, 0, d.day + 1);
         const clickedDayNumber = Math.floor(clickedDate.getTime() / 86400000);
-      
+
         if (clickedDayNumber > nowDayNumber) {
           return;
         }
-      
+
+        // Get the clicked square's position
+        const pos = getPosition(d.day);
+
+        // Convert SVG coordinates to container coordinates
+        const svgElement = svg.node();
+        const svgRect = svgElement.getBoundingClientRect();
+        const scale = svgRect.width / svgElement.viewBox.baseVal.width || 1;
+
+        setRippleCoords({
+          x: pos.x * scale,
+          y: pos.y * scale,
+        });
+
+        // Continue with existing color transitions
         const clickedSquare = d;
-      
-        // Select all squares and apply a more visible ripple effect
-        svg.selectAll('.day-square')
-          .each(function(squareData) {
-            const distance = calculateSquareDistance(clickedSquare, squareData);
-            
-            if (distance <= MAX_RIPPLE_DISTANCE) {
-              const delay = distance * (RIPPLE_DURATION / MAX_RIPPLE_DISTANCE);
-              
-              d3.select(this)
-                .transition()
-                .delay(delay)
-                .duration(600)
-                // Add transform scale for more visible effect
-                .attr('transform', `scale(1.2)`)
-                .style('fill', '#ff9f43') // Bright orange color for visibility
-                .transition()
-                .duration(200)
-                .attr('transform', 'scale(1)')
-                .style('fill', function() {
-                  const thisSquareDate = new Date(2025, 0, squareData.day + 1);
-                  const thisSquareDayNumber = Math.floor(
-                    thisSquareDate.getTime() / 86400000
-                  );
-      
-                  if (thisSquareDayNumber > nowDayNumber) {
-                    return 'rgba(0, 0, 0, 0.05)';
-                  }
-                  
-                  const isCompleted = completedDayNumbers.includes(thisSquareDayNumber);
-                  return isCompleted ? RIPPLE_COLOR : 'rgba(0, 0, 0, 0.2)';
-                });
-            }
-          });
-      
+        svg.selectAll('.day-square').each(function (squareData) {
+          const distance = calculateSquareDistance(clickedSquare, squareData);
+
+          if (distance <= MAX_RIPPLE_DISTANCE) {
+            const delay = distance * (RIPPLE_DURATION / MAX_RIPPLE_DISTANCE);
+
+            d3.select(this)
+              .transition()
+              .delay(delay)
+              .duration(200)
+              .attr('transform', `scale(1.2)`)
+              .style('fill', '#ff9f43')
+              .transition()
+              .duration(400)
+              .attr('transform', 'scale(1)')
+              .style('fill', function () {
+                const thisSquareDate = new Date(2025, 0, squareData.day + 1);
+                const thisSquareDayNumber = Math.floor(
+                  thisSquareDate.getTime() / 86400000
+                );
+
+                if (thisSquareDayNumber > nowDayNumber) {
+                  return 'rgba(0, 0, 0, 0.05)';
+                }
+
+                const isCompleted =
+                  completedDayNumbers.includes(thisSquareDayNumber);
+                return isCompleted ? RIPPLE_COLOR : 'rgba(0, 0, 0, 0.2)';
+              });
+          }
+        });
+
         onCompleteDay(clickedDate);
       })
 
@@ -313,7 +340,19 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
 
   return (
     <div className="p-4 bg-gray-100 rounded shadow">
-      <div ref={heatmapRef} className="heatmap-container"></div>
+      <div ref={heatmapRef} className="heatmap-container relative">
+        {isRippling && (
+          <div
+            className="heatmap-ripple absolute"
+            style={{
+              left: `${rippleCoords.x}px`,
+              top: `${rippleCoords.y}px`,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
