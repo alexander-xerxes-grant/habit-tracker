@@ -7,6 +7,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
   const svgRef = useRef(null);
   const [rippleCoords, setRippleCoords] = useState({ x: -1, y: -1 });
   const [isRippling, setIsRippling] = useState(false);
+  const [tooltip, setTooltip] = useState(null);
 
   useEffect(() => {
     if (rippleCoords.x !== -1 && rippleCoords.y !== -1) {
@@ -55,13 +56,32 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     //   .attr('width', width)
     //   .attr('height', height + 30);
 
+    const tooltip = d3.select('.heatmap-tooltip').empty()
+      ? d3.select('body').append('div').attr('class', 'heatmap-tooltip')
+      : d3.select('.heatmap-tooltip');
 
+    const existingTooltip = document.querySelector('.heatmap-tooltip');
+    if (existingTooltip) {
+      existingTooltip.remove();
+    }
 
-    // Create a tooltip when component mounts
-    const tooltip = d3
-      .select('body')
-      .append('div')
-      .attr('class', 'heatmap-tooltip')
+    // Create a new tooltip div
+    const newTooltip = document.createElement('div');
+    newTooltip.className = 'heatmap-tooltip';
+    newTooltip.style.position = 'absolute';
+    newTooltip.style.background = '#fff';
+    newTooltip.style.border = '1px solid #ccc';
+    newTooltip.style.padding = '4px 8px';
+    newTooltip.style.borderRadius = '4px';
+    newTooltip.style.pointerEvents = 'none';
+    newTooltip.style.opacity = '0';
+    newTooltip.style.zIndex = '1000';
+
+    document.body.appendChild(newTooltip);
+
+    setTooltip(newTooltip);
+
+    tooltip
       .style('position', 'absolute')
       .style('background', '#fff')
       .style('border', '1px solid #ccc')
@@ -69,7 +89,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       .style('border-radius', '4px')
       .style('pointer-events', 'none')
       .style('opacity', 0)
-      .style('z-index', 1000); // Ensure tooltip stays on top
+      .style('z-index', 1000);
 
     // Store the tooltip reference
     tooltipRef.current = tooltip;
@@ -90,7 +110,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       .attr('width', width)
       .attr('height', height + 30)
       .attr('viewBox', `0 0 ${width} ${height + 30}`);
-    
+
     svgRef.current = svg; // Store SVG reference
 
     // Define a constant for the corner radius ratio
@@ -294,26 +314,31 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       })
 
       .on('mouseover', function (event, d) {
-        const date = new Date(2025, 0, d.day + 1);
-        tooltip
-          .style('opacity', 1)
-          .html(`<strong>Date:</strong> ${date.toDateString()}<br/>`)
-          .style('left', event.pageX + 10 + 'px')
-          .style('top', event.pageY - 20 + 'px');
+        if (tooltip) {
+          const date = new Date(2025, 0, d.day + 1);
+          tooltip.innerHTML = `<strong>Date:</strong> ${date.toDateString()}<br/>`;
+          tooltip.style.opacity = '1';
+          tooltip.style.left = `${event.pageX + 10}px`;
+          tooltip.style.top = `${event.pageY - 20}px`;
+        }
       })
       .on('mousemove', function (event, d) {
-        const date = new Date(2025, 0, d.day + 1);
-        tooltip
-          .html(`<strong>Date:</strong> ${date.toDateString()}<br/>`)
-          .style('left', event.pageX + 10 + 'px')
-          .style('top', event.pageY - 20 + 'px');
+        const tooltip = d3.select('.heatmap-tooltip');
+
+        if (!tooltip.empty()) {
+          const date = new Date(2025, 0, d.day + 1);
+          tooltip
+            .html(`<strong>Date:</strong> ${date.toDateString()}<br/>`)
+            .style('left', `${event.pageX + 10}px`)
+            .style('top', `${event.pageY - 20}px`);
+        }
       })
-      // Updated "mouseleave" to forcibly hide the tooltip
       .on('mouseleave', function () {
-        tooltip
-          .style('opacity', 0)
-          .style('left', '-9999px')
-          .style('top', '-9999px');
+        if (tooltip) {
+          tooltip.style.opacity = '0';
+          tooltip.style.left = '-9999px';
+          tooltip.style.top = '-9999px';
+        }
       });
 
     // Add month labels
@@ -340,8 +365,10 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       currentX += monthWidth + monthPadding;
     });
     return () => {
+      // Safely remove tooltip if it exists
       if (tooltipRef.current) {
         tooltipRef.current.remove();
+        tooltipRef.current = null;
       }
     };
   }, [completedDates, onCompleteDay]);
