@@ -1,393 +1,258 @@
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
 const Heatmap = ({ completedDates, onCompleteDay }) => {
-  const heatmapRef = useRef(null);
-  const tooltipRef = useRef(null);
+  // References for SVG container and tooltip
   const svgRef = useRef(null);
-  const [rippleCoords, setRippleCoords] = useState({ x: -1, y: -1 });
-  const [isRippling, setIsRippling] = useState(false);
   const [tooltip, setTooltip] = useState(null);
 
-  useEffect(() => {
-    if (rippleCoords.x !== -1 && rippleCoords.y !== -1) {
-      setIsRippling(true);
-      setTimeout(() => setIsRippling(false), 900);
-    }
-  }, [rippleCoords]);
+  // Configuration constants
+  const CELL_SIZE = 15;
+  const CELL_PADDING = 2;
+  const MONTH_LABEL_HEIGHT = 20;
+  const DAYS_IN_WEEK = 7;
+
+  const WAVE_SPEED = 125;
+  const MAX_WAVE_DISTANCE = 100;
+  const WAVE_SCALE = 1.15;
+  const WAVE_DECAY = 0.85;
+
+  const calculateDistance = (square1, square2) => {
+    // Get center points of squares in grid coordinates
+    const x1 = d3.timeWeek.count(d3.timeYear(square1), square1);
+    const y1 = square1.getDay();
+    const x2 = d3.timeWeek.count(d3.timeYear(square2), square2);
+    const y2 = square2.getDay();
+
+    // Use standard distance formula but weighted to account for grid spacing
+    return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+  };
 
   useEffect(() => {
-    if (!isRippling) {
-      setRippleCoords({ x: -1, y: -1 });
-    }
-  }, [isRippling]);
-
-  useEffect(() => {
-    const squareSize = 15;
-    const padding = 2;
-    const monthPadding = 15;
-    const daysInWeek = 7;
-
-    // Calculate month data including first day of week
-    const months = Array.from({ length: 12 }, (_, i) => {
-      const firstDay = new Date(2025, i, 1);
-      const lastDay = new Date(2025, i + 1, 0);
-      return {
-        name: firstDay.toLocaleString('default', { month: 'short' }),
-        days: lastDay.getDate(),
-        firstDayOfWeek: firstDay.getDay(),
-        startDay: Math.floor(
-          (firstDay - new Date(2025, 0, 1)) / (1000 * 60 * 60 * 24)
-        ),
-      };
-    });
-
-    // Calculate total width including month padding
-    const totalWeeks = months.reduce((acc, month) => {
-      return acc + Math.ceil((month.firstDayOfWeek + month.days) / 7);
-    }, 0);
-
-    const width = totalWeeks * (squareSize + padding) + 11 * monthPadding;
-    const height = daysInWeek * (squareSize + padding);
-
-    // const svg = d3
-    //   .select(heatmapRef.current)
-    //   .append('svg')
-    //   .attr('width', width)
-    //   .attr('height', height + 30);
-
-    const tooltip = d3.select('.heatmap-tooltip').empty()
-      ? d3.select('body').append('div').attr('class', 'heatmap-tooltip')
-      : d3.select('.heatmap-tooltip');
-
-    const existingTooltip = document.querySelector('.heatmap-tooltip');
-    if (existingTooltip) {
-      existingTooltip.remove();
+    // Clear previous content
+    if (svgRef.current) {
+      svgRef.current.innerHTML = '';
     }
 
-    // Create a new tooltip div
-    const newTooltip = document.createElement('div');
-    newTooltip.className = 'heatmap-tooltip';
-    newTooltip.style.position = 'absolute';
-    newTooltip.style.background = '#fff';
-    newTooltip.style.border = '1px solid #ccc';
-    newTooltip.style.padding = '4px 8px';
-    newTooltip.style.borderRadius = '4px';
-    newTooltip.style.pointerEvents = 'none';
-    newTooltip.style.opacity = '0';
-    newTooltip.style.zIndex = '1000';
+    // Create tooltip if it doesn't exist
+    if (!tooltip) {
+      const newTooltip = document.createElement('div');
+      newTooltip.style.position = 'absolute';
+      newTooltip.style.backgroundColor = 'white';
+      newTooltip.style.padding = '5px';
+      newTooltip.style.border = '1px solid #ccc';
+      newTooltip.style.borderRadius = '4px';
+      newTooltip.style.pointerEvents = 'none';
+      newTooltip.style.opacity = '0';
+      document.body.appendChild(newTooltip);
+      setTooltip(newTooltip);
+    }
 
-    document.body.appendChild(newTooltip);
+    // Calculate the year's data
+    const year = new Date().getFullYear();
+    const months = d3.timeMonths(
+      new Date(year, 0, 1),
+      new Date(year + 1, 0, 1)
+    );
 
-    setTooltip(newTooltip);
+    // Calculate dimensions
+    const width = 53 * (CELL_SIZE + CELL_PADDING); // 53 weeks max in a year
+    const height =
+      DAYS_IN_WEEK * (CELL_SIZE + CELL_PADDING) + MONTH_LABEL_HEIGHT;
 
-    tooltip
-      .style('position', 'absolute')
-      .style('background', '#fff')
-      .style('border', '1px solid #ccc')
-      .style('padding', '4px 8px')
-      .style('border-radius', '4px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0)
-      .style('z-index', 1000);
-
-    // Store the tooltip reference
-    tooltipRef.current = tooltip;
-
-    // Add a reusuable hide tooltip function
-    const hideTooltip = () => {
-      tooltip
-        .style('opacity', 0)
-        .style('left', '-9999px')
-        .style('top', '-9999px');
-    };
-
-    const container = d3.select(heatmapRef.current);
-    container.selectAll('*').remove();
-
-    const svg = container
-      .append('svg')
+    // Create SVG
+    const svg = d3
+      .select(svgRef.current)
       .attr('width', width)
-      .attr('height', height + 30)
-      .attr('viewBox', `0 0 ${width} ${height + 30}`);
+      .attr('height', height)
+      .attr('viewBox', `0 0 ${width} ${height}`);
 
-    svgRef.current = svg; // Store SVG reference
+    // Create date squares
+    const days = d3.timeDays(new Date(year, 0, 1), new Date(year + 1, 0, 1));
 
-    // Define a constant for the corner radius ratio
-    const CORNER_RADIUS_RATIO = 0.2; // 20% of square size
-
-    // Calculate corner radius based on square size
-    const calculateCornerRadius = (size) => {
-      // We multiply the square size by our ratio and round to the nearest decimal
-      // Math.max ensures we never go below 1 pixel
-      return Math.max(1, Math.round(size * CORNER_RADIUS_RATIO));
+    // Helper function to check if a date is completed
+    const isDateCompleted = (date) => {
+      const result = completedDates.some((completedDate) => {
+        const completedDateObj = new Date(completedDate);
+        const isCompleted =
+          completedDateObj.toDateString() === date.toDateString();
+        if (isCompleted) {
+          console.log('Found completed date:', {
+            input: date.toDateString(),
+            matched: completedDateObj.toDateString(),
+            originalValue: completedDate,
+          });
+        }
+        return isCompleted;
+      });
+      return result;
     };
 
-    // Calculate "today" for reference
-    const today = new Date();
-    const yearStart = new Date(2025, 0, 1);
-    let dayIndex = Math.floor((today - yearStart) / (1000 * 60 * 60 * 24));
-    // Make sure dayIndex isn't negative
-    if (dayIndex < 0) dayIndex = 0;
-
-    // We'll also define a "nowDayNumber" for comparing to each square
-    const nowDayNumber = Math.floor(today.getTime() / (1000 * 60 * 60 * 24));
-
-    // A helper to compute X/Y positions of each day
-    const getPosition = (dayNumber) => {
-      let monthIndex = 0;
-      let daysAccumulated = 0;
-      let monthsBeforeCurrent = 0;
-
-      while (
-        monthIndex < months.length &&
-        daysAccumulated + months[monthIndex].days <= dayNumber
-      ) {
-        daysAccumulated += months[monthIndex].days;
-        monthsBeforeCurrent++;
-        monthIndex++;
-      }
-
-      const currentMonth = months[monthIndex];
-      const dayInMonth = dayNumber - daysAccumulated;
-      const monthStartOffset = currentMonth.firstDayOfWeek;
-      const adjustedDay = monthStartOffset + dayInMonth;
-
-      let previousWeeks = 0;
-      for (let i = 0; i < monthIndex; i++) {
-        previousWeeks += Math.ceil(
-          (months[i].firstDayOfWeek + months[i].days) / 7
-        );
-      }
-
-      const currentWeek = Math.floor(adjustedDay / 7);
-      const dayOfWeek = adjustedDay % 7;
-
-      return {
-        x:
-          (previousWeeks + currentWeek) * (squareSize + padding) +
-          monthsBeforeCurrent * monthPadding,
-        y: dayOfWeek * (squareSize + padding),
-      };
-    };
-
-    // Create day squares for the entire year (0..364)
-    const daysInYear = 365;
-    const data = Array.from({ length: daysInYear }, (_, i) => ({
-      day: i,
-      completed: false,
-    }));
-
-    // Convert completedDates to "day numbers"
-    const completedDayNumbers = completedDates.map((dateStr) => {
-      const dt = new Date(dateStr);
-      return Math.floor(dt.getTime() / 86400000);
-    });
-
-    const RIPPLE_DURATION = 1000; // Duration of ripple in milliseconds
-    const RIPPLE_COLOR = '#ba6306'; // Use your existing completed color
-    const MAX_RIPPLE_DISTANCE = 10; // How many squares away the ripple should travel
-
-    const calculateSquareDistance = (square1, square2) => {
-      // Get the X/Y positions of each square
-      const pos1 = getPosition(square1.day);
-      const pos2 = getPosition(square2.day);
-
-      // Calculate the Euclidean distance
-      const dx = pos1.x - pos2.x;
-      const dy = pos1.y - pos2.y;
-
-      // Normalize by square size to get unit distance
-      return Math.sqrt(dx * dx + dy * dy) / (squareSize + padding);
-    };
-
-    // Draw the squares
+    // Add day cells
     svg
-      .selectAll('.day-square')
-      .data(data)
+      .selectAll('.day')
+      .data(days)
       .enter()
       .append('rect')
-      .attr('class', (d) => `day-square day-square-${d.day}`)
-      .attr('class', 'day-square')
-      .attr('width', squareSize)
-      .attr('height', squareSize)
-      .attr('x', (d) => getPosition(d.day).x)
-      .attr('y', (d) => getPosition(d.day).y)
-      .attr('rx', calculateCornerRadius(squareSize))
-      .attr('ry', calculateCornerRadius(squareSize))
-
-      // Decide fill color
-      .attr('fill', (d) => {
-        const thisSquareDate = new Date(2025, 0, d.day + 1);
-        const thisSquareDayNumber = Math.floor(
-          thisSquareDate.getTime() / 86400000
-        );
-
-        const isCompleted = completedDayNumbers.includes(thisSquareDayNumber);
-
-        // 1) If thisSquareDayNumber is in the future, make it very light
-        if (thisSquareDayNumber > nowDayNumber) {
-          return 'rgba(0, 0, 0, 0.05)'; // Future
-        }
-        // 2) If it's in the past or today but not completed, use a grey color
-        if (!isCompleted) {
-          return 'rgba(0, 0, 0, 0.2)'; // Past/Today uncompleted
-        }
-        // 3) If it's completed, color it a distinct color
-        return '#ba6306'; // Completed
+      .attr('class', 'day')
+      .attr('width', CELL_SIZE)
+      .attr('height', CELL_SIZE)
+      .attr('rx', 2)
+      .attr('ry', 2)
+      .attr('x', (d) => {
+        const weekNum = d3.timeWeek.count(d3.timeYear(d), d);
+        return weekNum * (CELL_SIZE + CELL_PADDING);
       })
-
-      // Stroke if it's "today"
-      .attr('stroke', (d) => {
-        const thisSquareDate = new Date(2025, 0, d.day + 1);
-        const thisSquareDayNumber = Math.floor(
-          thisSquareDate.getTime() / 86400000
-        );
-        return thisSquareDayNumber === nowDayNumber ? 'red' : 'none';
+      .attr('y', (d) => {
+        return d.getDay() * (CELL_SIZE + CELL_PADDING);
       })
-      .attr('stroke-width', (d) => {
-        const thisSquareDate = new Date(2025, 0, d.day + 1);
-        const thisSquareDayNumber = Math.floor(
-          thisSquareDate.getTime() / 86400000
-        );
-        return thisSquareDayNumber === nowDayNumber ? 2 : 0;
+      .attr('fill', (d) => (isDateCompleted(d) ? '#ba6306' : '#ebedf0'))
+      .attr('transform-origin', (d) => {
+        const weekNum = d3.timeWeek.count(d3.timeYear(d), d);
+        const x = weekNum * (CELL_SIZE + CELL_PADDING) + CELL_SIZE / 2;
+        const y = d.getDay() * (CELL_SIZE + CELL_PADDING) + CELL_SIZE / 2;
+        return `${x} ${y}`;
       })
+      .on('click', (event, d) => {
+        if (d <= new Date()) {
+          svg.selectAll('.day').each(function (squareDate) {
+            // Changed to regular function
+            const currentElement = this; // Store reference to current DOM element
+            if (currentElement !== event.currentTarget) {
+              // Compare actual DOM elements
+              const square = d3.select(currentElement); // Select using stored reference
+              const distance = calculateDistance(d, squareDate);
 
-      .on('click', function (event, d) {
-        hideTooltip();
+              if (distance <= MAX_WAVE_DISTANCE) {
+                const delay = distance * WAVE_SPEED;
+                const scaleAmount = WAVE_SCALE * Math.pow(WAVE_DECAY, distance);
 
-        const clickedDate = new Date(2025, 0, d.day + 1);
-        const clickedDayNumber = Math.floor(clickedDate.getTime() / 86400000);
+                const squareWidth = CELL_SIZE;
+                const squareHeight = CELL_SIZE;
+                const squareX = parseFloat(square.attr('x'));
+                const squareY = parseFloat(square.attr('y'));
 
-        if (clickedDayNumber > nowDayNumber) {
-          return;
-        }
+                // Get current fill colour to determine animation colour
+                const isSquareFilled = square.attr('fill') === '#ba6306';
+                const originalColor = square.attr('fill');
 
-        // Get the clicked square's position
-        const pos = getPosition(d.day);
+                // Pulse the square
+                const pulseColor = isSquareFilled ? '#ba6306' : '#cf7311';
 
-        // Convert SVG coordinates to container coordinates
-        const svgElement = svg.node();
-        const svgRect = svgElement.getBoundingClientRect();
-        const scale = svgRect.width / svgElement.viewBox.baseVal.width || 1;
+                square
+                  .transition()
+                  .delay(delay)
+                  .duration(300)
+                  .attr('width', squareWidth * scaleAmount)
+                  .attr('height', squareHeight * scaleAmount)
+                  .attr('x', squareX - (squareWidth * (scaleAmount - 1)) / 2)
+                  .attr('y', squareY - (squareHeight * (scaleAmount - 1)) / 2)
+                  .attr('fill', pulseColor)
+                  .transition()
+                  .duration(300)
+                  .attr('width', squareWidth)
+                  .attr('height', squareHeight)
+                  .attr('x', squareX)
+                  .attr('y', squareY)
+                  .attr('fill', originalColor);
+              }
+            }
+          });
 
-        setRippleCoords({
-          x: pos.x * scale,
-          y: pos.y * scale,
-        });
+          const clickedSquare = d3.select(event.currentTarget);
+          const originalWidth = CELL_SIZE;
+          const originalHeight = CELL_SIZE;
+          const originalX = parseFloat(clickedSquare.attr('x'));
+          const originalY = parseFloat(clickedSquare.attr('y'));
 
-        // Continue with existing color transitions
-        const clickedSquare = d;
-        svg.selectAll('.day-square').each(function (squareData) {
-          const distance = calculateSquareDistance(clickedSquare, squareData);
+          // Determine if the square is currently filled
+          const isCurrentlyFilled = clickedSquare.attr('fill') === '#ba6306';
 
-          if (distance <= MAX_RIPPLE_DISTANCE) {
-            const delay = distance * (RIPPLE_DURATION / MAX_RIPPLE_DISTANCE);
-
-            d3.select(this)
+          if (!isCurrentlyFilled) {
+            // Case 1: Square is empty - fill immediately then pulse
+            clickedSquare.attr('fill', '#ba6306');
+            clickedSquare
               .transition()
-              .delay(delay)
-              .duration(200)
-              .attr('transform', `scale(1.2)`)
-              .style('fill', '#ff9f43')
+              .duration(1000)
+              .attr('width', originalWidth * 1.2)
+              .attr('height', originalHeight * 1.2)
+              .attr('x', originalX - originalWidth * 0.1)
+              .attr('y', originalY - originalHeight * 0.1)
               .transition()
-              .duration(400)
-              .attr('transform', 'scale(1)')
-              .style('fill', function () {
-                const thisSquareDate = new Date(2025, 0, squareData.day + 1);
-                const thisSquareDayNumber = Math.floor(
-                  thisSquareDate.getTime() / 86400000
-                );
-
-                if (thisSquareDayNumber > nowDayNumber) {
-                  return 'rgba(0, 0, 0, 0.05)';
-                }
-
-                const isCompleted =
-                  completedDayNumbers.includes(thisSquareDayNumber);
-                return isCompleted ? RIPPLE_COLOR : 'rgba(0, 0, 0, 0.2)';
+              .duration(1000)
+              .attr('width', originalWidth)
+              .attr('height', originalHeight)
+              .attr('x', originalX)
+              .attr('y', originalY)
+              .on('end', () => {
+                onCompleteDay(d);
+              });
+          } else {
+            // Case 2: Square is filled - pulse while filled, then empty
+            clickedSquare
+              .transition()
+              .duration(1000)
+              .attr('width', originalWidth * 1.2)
+              .attr('height', originalHeight * 1.2)
+              .attr('x', originalX - originalWidth * 0.1)
+              .attr('y', originalY - originalHeight * 0.1)
+              .transition()
+              .duration(1000)
+              .attr('width', originalWidth)
+              .attr('height', originalHeight)
+              .attr('x', originalX)
+              .attr('y', originalY)
+              .on('end', () => {
+                // Only change color after animation completes
+                clickedSquare.attr('fill', '#ebedf0');
+                onCompleteDay(d);
               });
           }
-        });
-
-        onCompleteDay(clickedDate);
+        }
       })
-
-      .on('mouseover', function (event, d) {
+      .on('mouseover', (event, d) => {
         if (tooltip) {
-          const date = new Date(2025, 0, d.day + 1);
-          tooltip.innerHTML = `<strong>Date:</strong> ${date.toDateString()}<br/>`;
           tooltip.style.opacity = '1';
           tooltip.style.left = `${event.pageX + 10}px`;
-          tooltip.style.top = `${event.pageY - 20}px`;
+          tooltip.style.top = `${event.pageY - 25}px`;
+          tooltip.textContent = d.toDateString();
+          tooltip.style.transform = 'scale(0.5)';
         }
       })
-      .on('mousemove', function (event, d) {
-        const tooltip = d3.select('.heatmap-tooltip');
-
-        if (!tooltip.empty()) {
-          const date = new Date(2025, 0, d.day + 1);
-          tooltip
-            .html(`<strong>Date:</strong> ${date.toDateString()}<br/>`)
-            .style('left', `${event.pageX + 10}px`)
-            .style('top', `${event.pageY - 20}px`);
-        }
-      })
-      .on('mouseleave', function () {
+      .on('mouseout', () => {
         if (tooltip) {
           tooltip.style.opacity = '0';
-          tooltip.style.left = '-9999px';
-          tooltip.style.top = '-9999px';
         }
       });
 
     // Add month labels
-    let currentX = 0;
-    months.forEach((month, i) => {
-      const monthWeeks = Math.ceil((month.firstDayOfWeek + month.days) / 7);
-      const monthWidth = monthWeeks * (squareSize + padding);
+    svg
+      .selectAll('.month')
+      .data(months)
+      .enter()
+      .append('text')
+      .attr('class', 'month')
+      .attr('x', (d) => {
+        const weekNum = d3.timeWeek.count(d3.timeYear(d), d);
+        return weekNum * (CELL_SIZE + CELL_PADDING);
+      })
+      .attr('y', height - 5)
+      .text((d) => d.toLocaleString('default', { month: 'short' }))
+      .attr('font-size', '12px')
+      .attr('fill', '#666');
 
-      svg
-        .append('text')
-        .attr('x', currentX + monthWidth / 2)
-        .attr('y', height + 20)
-        .attr('text-anchor', 'middle')
-        .attr('font-size', 12)
-        .attr('fill', '#6b7280')
-        .text(month.name);
-
-      // optional: add lines between months if you want them
-      if (i < months.length - 1) {
-        // You might need to create a line, not set x1 on the svg itself
-        // so let’s skip for clarity or adjust it properly.
-      }
-
-      currentX += monthWidth + monthPadding;
-    });
+    // Cleanup function
     return () => {
-      // Safely remove tooltip if it exists
-      if (tooltipRef.current) {
-        tooltipRef.current.remove();
-        tooltipRef.current = null;
+      if (tooltip) {
+        tooltip.remove();
+        setTooltip(null);
       }
     };
-  }, [completedDates, onCompleteDay]);
+  }, [completedDates, onCompleteDay, tooltip]);
 
   return (
-    <div className="p-4 bg-gray-100 rounded shadow">
-      <div ref={heatmapRef} className="heatmap-container relative">
-        {isRippling && (
-          <div
-            className="heatmap-ripple absolute"
-            style={{
-              left: `${rippleCoords.x}px`,
-              top: `${rippleCoords.y}px`,
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
-      </div>
+    <div className="heatmap-container w-full overflow-x-auto">
+      <svg ref={svgRef} />
     </div>
   );
 };

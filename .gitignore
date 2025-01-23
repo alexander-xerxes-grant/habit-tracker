@@ -16,3 +16,5 @@
 # Logs
 **/logs
 *.log
+
+old_heatmap.js
