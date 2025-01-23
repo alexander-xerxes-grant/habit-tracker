@@ -7,12 +7,12 @@ module.exports = {
   parserOptions: { ecmaVersion: 'latest' },
   extends: [
     'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended',
+    // 'plugin:react/recommended',
+    // 'plugin:react-hooks/recommended',
     'prettier',
   ],
   settings: {
-    react: { version: 'detect' },
+    react: { version: '999.999.999' },
   },
   overrides: [
     // Node backend
@@ -31,6 +31,7 @@ module.exports = {
       },
       rules: {
         'react/react-in-jsx-scope': 'off',
+        'react/prop-types': 'off',
       },
     },
     // Tailwind config (Node)

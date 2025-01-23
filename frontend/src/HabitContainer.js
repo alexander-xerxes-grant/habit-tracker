@@ -26,12 +26,12 @@ function calculateStreak(completedDates) {
     if (dayNumbers[i] === currentDay) {
       streak++;
       currentDay--;
-  } else if (dayNumbers[i] < currentDay) {
-    break;
+    } else if (dayNumbers[i] < currentDay) {
+      break;
+    }
   }
-}
 
-return streak;
+  return streak;
 }
 
 const HabitContainer = () => {
@@ -57,7 +57,7 @@ const HabitContainer = () => {
         name: `Habit ${habits.length + 1}`,
       };
 
-      const response =  await axios.post(API_URL, newHabitData);
+      const response = await axios.post(API_URL, newHabitData);
 
       setHabits([...habits, response.data]);
     } catch (error) {
@@ -72,7 +72,7 @@ const HabitContainer = () => {
       });
       // This returns the updated habit from the backend
       const updatedHabit = response.data;
-  
+
       // Merge into local state
       const updatedHabits = habits.map((h) =>
         h._id === updatedHabit._id ? updatedHabit : h
@@ -80,6 +80,22 @@ const HabitContainer = () => {
       setHabits(updatedHabits);
     } catch (error) {
       console.error('Error toggling day:', error);
+    }
+  };
+
+  const deleteHabit = async (habitId) => {
+    if (!window.confirm('Are you sure you want to delete this habit?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_URL}/${habitId}`);
+
+      // If deletion was succesful, update the local state by filtering out the deleted habit
+      setHabits(habits.filter((habit) => habit._id !== habitId));
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+      alert('Failed to delete habit. Please try again.');
     }
   };
 
@@ -109,17 +125,23 @@ const HabitContainer = () => {
               }}
               className="text-xl font-semibold mb-4 p-2 border rounded"
             />
+            <button
+              onClick={() => deleteHabit(habit._id)}
+              className="text-sm text-red-600 hover:underline"
+            >
+              Delete
+            </button>
             <div className="mt-2">
               <span className="text-sm font-semibold text-gray-600">
                 Streak: {calculateStreak(habit.completedDates)} days
               </span>
             </div>
             <div key={`heatmap-${habit.id}`}>
-            <Heatmap
-  habitId={habit._id}
-  completedDates={habit.completedDates}
-  onCompleteDay={(date) => toggleHabitDay(habit._id, date)}
-/>
+              <Heatmap
+                habitId={habit._id}
+                completedDates={habit.completedDates}
+                onCompleteDay={(date) => toggleHabitDay(habit._id, date)}
+              />
             </div>
           </div>
         ))}

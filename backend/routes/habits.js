@@ -76,7 +76,6 @@ router.delete('/:id', async (req, res) => {
 });
 module.exports = router;
 
-
 // Mark today's date as completed for a given habit
 router.put('/:id/toggle', async (req, res) => {
   try {
@@ -107,4 +106,3 @@ router.put('/:id/toggle', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-

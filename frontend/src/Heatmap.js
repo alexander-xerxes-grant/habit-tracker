@@ -1,10 +1,36 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
-const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
+const Heatmap = ({ completedDates, onCompleteDay }) => {
   const heatmapRef = useRef(null);
+  const tooltipRef = useRef(null);
 
   useEffect(() => {
+    // Create a tooltip when component mounts
+    const tooltip = d3
+      .select('body')
+      .append('div')
+      .attr('class', 'heatmap-tooltip')
+      .style('position', 'absolute')
+      .style('background', '#fff')
+      .style('border', '1px solid #ccc')
+      .style('padding', '4px 8px')
+      .style('border-radius', '4px')
+      .style('pointer-events', 'none')
+      .style('opacity', 0)
+      .style('z-index', 1000); // Ensure tooltip stays on top
+
+    // Store the tooltip reference
+    tooltipRef.current = tooltip;
+
+    // Add a reusuable hide tooltip function
+    const hideTooltip = () => {
+      tooltip
+        .style('opacity', 0)
+        .style('left', '-9999px')
+        .style('top', '-9999px');
+    };
+
     const container = d3.select(heatmapRef.current);
     container.selectAll('*').remove();
 
@@ -12,6 +38,16 @@ const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
     const padding = 2;
     const monthPadding = 15;
     const daysInWeek = 7;
+
+    // Define a constant for the corner radius ratio
+    const CORNER_RADIUS_RATIO = 0.2; // 20% of square size
+
+    // Calculate corner radius based on square size
+    const calculateCornerRadius = (size) => {
+      // We multiply the square size by our ratio and round to the nearest decimal
+      // Math.max ensures we never go below 1 pixel
+      return Math.max(1, Math.round(size * CORNER_RADIUS_RATIO));
+    };
 
     // Calculate month data including first day of week
     const months = Array.from({ length: 12 }, (_, i) => {
@@ -102,17 +138,25 @@ const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
       return Math.floor(dt.getTime() / 86400000);
     });
 
-    // Create a tooltip
-    const tooltip = d3
-      .select('body')
-      .append('div')
-      .style('position', 'absolute')
-      .style('background', '#fff')
-      .style('border', '1px solid #ccc')
-      .style('padding', '4px 8px')
-      .style('border-radius', '4px')
-      .style('pointer-events', 'none')
-      .style('opacity', 0);
+    const RIPPLE_DURATION = 5000; // Duration of ripple in milliseconds
+    const RIPPLE_COLOR = '#ba6306'; // Use your existing completed color
+    const MAX_RIPPLE_DISTANCE = 1000; // How many squares away the ripple should travel
+
+    const calculateSquareDistance = (square1, square2) => {
+      // Calculate row and column differences
+      const week1 = Math.floor(square1.day / 7);
+      const day1 = square1.day % 7;
+      const week2 = Math.floor(square2.day / 7);
+      const day2 = square2.day % 7;
+      
+      // Calculate direct distance in grid units
+      const dx = week2 - week1;
+      const dy = day2 - day1;
+      
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      console.log(`Distance from day ${square1.day} to ${square2.day}: ${distance}`);
+      return distance;
+    };
 
     // Draw the squares
     svg
@@ -125,6 +169,8 @@ const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
       .attr('height', squareSize)
       .attr('x', (d) => getPosition(d.day).x)
       .attr('y', (d) => getPosition(d.day).y)
+      .attr('rx', calculateCornerRadius(squareSize))
+      .attr('ry', calculateCornerRadius(squareSize))
 
       // Decide fill color
       .attr('fill', (d) => {
@@ -163,32 +209,62 @@ const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
         return thisSquareDayNumber === nowDayNumber ? 2 : 0;
       })
 
-      // Click event
-      .on('click', function (event, d) {
-        // 1) Convert the day index to an actual date
+      .on('click', function(event, d) {
+        hideTooltip();
+      
         const clickedDate = new Date(2025, 0, d.day + 1);
         const clickedDayNumber = Math.floor(clickedDate.getTime() / 86400000);
-
-        // 2) If this day is in the future, do nothing
+      
         if (clickedDayNumber > nowDayNumber) {
           return;
         }
-
-        // 3) Otherwise, call parent callback to mark it completed
+      
+        const clickedSquare = d;
+      
+        // Select all squares and apply a more visible ripple effect
+        svg.selectAll('.day-square')
+          .each(function(squareData) {
+            const distance = calculateSquareDistance(clickedSquare, squareData);
+            
+            if (distance <= MAX_RIPPLE_DISTANCE) {
+              const delay = distance * (RIPPLE_DURATION / MAX_RIPPLE_DISTANCE);
+              
+              d3.select(this)
+                .transition()
+                .delay(delay)
+                .duration(600)
+                // Add transform scale for more visible effect
+                .attr('transform', `scale(1.2)`)
+                .style('fill', '#ff9f43') // Bright orange color for visibility
+                .transition()
+                .duration(200)
+                .attr('transform', 'scale(1)')
+                .style('fill', function() {
+                  const thisSquareDate = new Date(2025, 0, squareData.day + 1);
+                  const thisSquareDayNumber = Math.floor(
+                    thisSquareDate.getTime() / 86400000
+                  );
+      
+                  if (thisSquareDayNumber > nowDayNumber) {
+                    return 'rgba(0, 0, 0, 0.05)';
+                  }
+                  
+                  const isCompleted = completedDayNumbers.includes(thisSquareDayNumber);
+                  return isCompleted ? RIPPLE_COLOR : 'rgba(0, 0, 0, 0.2)';
+                });
+            }
+          });
+      
         onCompleteDay(clickedDate);
-
-        // Optional immediate fill change
-        d3.select(this).attr('fill', '#ba6306');
-
-        tooltip
-          .style('opacity', 0)
-          .style('left', '-9999px')
-          .style('top', '-9999px');
       })
 
-      // Mouse hover events
-      .on('mouseover', function () {
-        tooltip.style('opacity', 1);
+      .on('mouseover', function (event, d) {
+        const date = new Date(2025, 0, d.day + 1);
+        tooltip
+          .style('opacity', 1)
+          .html(`<strong>Date:</strong> ${date.toDateString()}<br/>`)
+          .style('left', event.pageX + 10 + 'px')
+          .style('top', event.pageY - 20 + 'px');
       })
       .on('mousemove', function (event, d) {
         const date = new Date(2025, 0, d.day + 1);
@@ -228,8 +304,12 @@ const Heatmap = ({ habitId, completedDates, onCompleteDay }) => {
 
       currentX += monthWidth + monthPadding;
     });
-
-  }, [completedDates]); // re-run whenever completedDates changes
+    return () => {
+      if (tooltipRef.current) {
+        tooltipRef.current.remove();
+      }
+    };
+  }, [completedDates, onCompleteDay]);
 
   return (
     <div className="p-4 bg-gray-100 rounded shadow">
