@@ -49,13 +49,13 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     const width = totalWeeks * (squareSize + padding) + 11 * monthPadding;
     const height = daysInWeek * (squareSize + padding);
 
-    const svg = d3
-      .select(heatmapRef.current)
-      .append('svg')
-      .attr('width', width)
-      .attr('height', height + 30);
+    // const svg = d3
+    //   .select(heatmapRef.current)
+    //   .append('svg')
+    //   .attr('width', width)
+    //   .attr('height', height + 30);
 
-    svgRef.current = svg; // Store SVG reference
+
 
     // Create a tooltip when component mounts
     const tooltip = d3
@@ -84,6 +84,14 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
 
     const container = d3.select(heatmapRef.current);
     container.selectAll('*').remove();
+
+    const svg = container
+      .append('svg')
+      .attr('width', width)
+      .attr('height', height + 30)
+      .attr('viewBox', `0 0 ${width} ${height + 30}`);
+    
+    svgRef.current = svg; // Store SVG reference
 
     // Define a constant for the corner radius ratio
     const CORNER_RADIUS_RATIO = 0.2; // 20% of square size
