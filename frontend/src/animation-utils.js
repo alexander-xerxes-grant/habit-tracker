@@ -9,8 +9,9 @@ const ANIMATION_CONFIGS = {
 };
 
 const getDistance = (source, target) => {
-  const weekDiff = d3.timeWeek.count(d3.timeYear(source), source) - 
-                   d3.timeWeek.count(d3.timeYear(target), target);
+  const weekDiff =
+    d3.timeWeek.count(d3.timeYear(source), source) -
+    d3.timeWeek.count(d3.timeYear(target), target);
   const dayDiff = source.getDay() - target.getDay();
   return Math.sqrt(weekDiff * weekDiff + dayDiff * dayDiff);
 };
@@ -18,8 +19,12 @@ const getDistance = (source, target) => {
 const getBasePosition = (date) => {
   const weekNum = d3.timeWeek.count(d3.timeYear(date), date);
   return {
-    x: weekNum * (ANIMATION_CONFIGS.BASE_CELL_SIZE + ANIMATION_CONFIGS.CELL_PADDING),
-    y: date.getDay() * (ANIMATION_CONFIGS.BASE_CELL_SIZE + ANIMATION_CONFIGS.CELL_PADDING)
+    x:
+      weekNum *
+      (ANIMATION_CONFIGS.BASE_CELL_SIZE + ANIMATION_CONFIGS.CELL_PADDING),
+    y:
+      date.getDay() *
+      (ANIMATION_CONFIGS.BASE_CELL_SIZE + ANIMATION_CONFIGS.CELL_PADDING),
   };
 };
 
@@ -27,7 +32,7 @@ export const createRippleEffect = (clickedElement, allSquares, onComplete) => {
   const sourceDate = d3.select(clickedElement).datum();
   let animatingSquares = new Set();
 
-  allSquares.each(function() {
+  allSquares.each(function () {
     const square = d3.select(this);
     square.interrupt();
     const basePos = getBasePosition(square.datum());
@@ -38,16 +43,16 @@ export const createRippleEffect = (clickedElement, allSquares, onComplete) => {
       .attr('y', basePos.y);
   });
 
-  allSquares.each(function(targetDate) {
+  allSquares.each(function (targetDate) {
     const square = d3.select(this);
     const distance = getDistance(sourceDate, targetDate);
-    
+
     if (distance <= ANIMATION_CONFIGS.RIPPLE_RADIUS) {
       animatingSquares.add(this);
       const delay = distance * 150;
-      const intensity = 1 - (distance / ANIMATION_CONFIGS.RIPPLE_RADIUS);
+      const intensity = 1 - distance / ANIMATION_CONFIGS.RIPPLE_RADIUS;
       const scale = 1 + (ANIMATION_CONFIGS.SCALE_FACTOR - 1) * intensity;
-      
+
       const basePos = getBasePosition(targetDate);
       const growAmount = ANIMATION_CONFIGS.BASE_CELL_SIZE * (scale - 1);
       const originalColor = square.attr('fill');
@@ -69,7 +74,7 @@ export const createRippleEffect = (clickedElement, allSquares, onComplete) => {
         .attr('x', basePos.x)
         .attr('y', basePos.y)
         .attr('fill', originalColor)
-        .on('end', function() {
+        .on('end', function () {
           animatingSquares.delete(this);
           if (animatingSquares.size === 0) {
             onComplete();
