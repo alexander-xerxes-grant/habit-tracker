@@ -6,13 +6,13 @@ import {
   createRippleEffect,
   createTooltip,
   updateTooltipPosition,
-  ANIMATION_CONSTANTS
+  ANIMATION_CONSTANTS,
 } from './animation-utils';
 
 /**
  * Heatmap Component
  * Displays a year-view calendar heatmap showing completed dates with animations
- * 
+ *
  * @param {Array} completedDates - Array of dates when the habit was completed
  * @param {Function} onCompleteDay - Callback function when a day is marked complete
  */
@@ -23,32 +23,31 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
   const tooltipRef = useRef(null);
   // State to prevent multiple animations from running simultaneously
   const [isAnimating, setIsAnimating] = useState(false);
+  const isHovering = useRef(false);
 
   // Visual configuration constants
-  const CELL_SIZE = 15;        // Size of each day square
-  const CELL_PADDING = 2;      // Space between squares
+  const CELL_SIZE = 15; // Size of each day square
+  const CELL_PADDING = 2; // Space between squares
   const MONTH_LABEL_HEIGHT = 20; // Space for month labels
-  const DAYS_IN_WEEK = 7;      // For calculating vertical layout
+  const DAYS_IN_WEEK = 7; // For calculating vertical layout
 
   // Handler for clicking on a day square
   const handleDayClick = useCallback((event, d) => {
-    // Only allow clicking on past dates and when no animation is running
     if (d <= new Date() && !isAnimating) {
       setIsAnimating(true);
-      
-      // Select all day squares for the ripple effect
       const allSquares = d3.selectAll('.day');
       
-      // Create the ripple animation
       createRippleEffect(
         event.currentTarget,
         allSquares,
-        ANIMATION_CONSTANTS,
+        {
+          ...ANIMATION_CONSTANTS,
+          CLICK_DURATION: 1000  // Ensure this matches your desired duration
+        },
         {
           onComplete: () => {
-            // Update the habit completion status
+            // Ensure we're updating state and calling the callback
             onCompleteDay(d);
-            // Allow new animations to start
             setIsAnimating(false);
           }
         }
@@ -57,32 +56,41 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
   }, [onCompleteDay, isAnimating]);
 
   // Handler for hovering over a day square
-  const handleMouseOver = useCallback((event, d) => {
-    if (tooltipRef.current) {
-      // Update tooltip content and position
-      updateTooltipPosition(tooltipRef.current, event, d.toDateString());
-      
-      // Create a gentler ripple effect for hover state
-      if (!isAnimating) {
-        const allSquares = d3.selectAll('.day');
-        createRippleEffect(
-          event.currentTarget,
-          allSquares,
-          {
-            ...ANIMATION_CONSTANTS,
-            WAVE_SCALE: 1.05,      // Smaller scale for subtle effect
-            MAX_WAVE_DISTANCE: 50,  // Limited spread distance
-            WAVE_SPEED: 75         // Faster animation speed
-          }
-        );
-      }
-    }
-  }, [isAnimating]);
+  const handleMouseOver = useCallback(
+    (event, d) => {
+      // Only proceed if we have a tooltip and aren't already hovering
+      if (tooltipRef.current && !isHovering.current) {
+        isHovering.current = true;
 
-  // Handler for mouse leaving a day square
+        updateTooltipPosition(tooltipRef.current, event, d.toDateString());
+
+        if (!isAnimating) {
+          const allSquares = d3.selectAll('.day');
+
+          // Clean up any existing animations first
+          allSquares.each(function () {
+            d3.select(this).interrupt();
+          });
+
+          // Create a gentler ripple effect for hover
+          createRippleEffect(event.currentTarget, allSquares, {
+            ...ANIMATION_CONSTANTS,
+            WAVE_SCALE: 1.05, // Subtle scale effect
+            MAX_WAVE_DISTANCE: 50, // Limited spread
+            WAVE_SPEED: 75, // Faster animation
+            HOVER_DURATION: 300, // Shorter duration for hover
+          });
+        }
+      }
+    },
+    [isAnimating]
+  );
+
   const handleMouseOut = useCallback(() => {
+    // Just reset hover state and tooltip
+    isHovering.current = false;
+    
     if (tooltipRef.current) {
-      // Fade out tooltip with a scale animation
       tooltipRef.current.style.opacity = '0';
       tooltipRef.current.style.transform = 'scale(0.8)';
     }
@@ -109,7 +117,8 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
 
     // Calculate SVG dimensions based on grid layout
     const width = 53 * (CELL_SIZE + CELL_PADDING); // 53 weeks maximum
-    const height = DAYS_IN_WEEK * (CELL_SIZE + CELL_PADDING) + MONTH_LABEL_HEIGHT;
+    const height =
+      DAYS_IN_WEEK * (CELL_SIZE + CELL_PADDING) + MONTH_LABEL_HEIGHT;
 
     // Create and configure the main SVG element
     const svg = d3
@@ -124,7 +133,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     // Helper function to check if a date has been completed
     const isDateCompleted = (date) => {
       return completedDates.some(
-        (completedDate) => 
+        (completedDate) =>
           new Date(completedDate).toDateString() === date.toDateString()
       );
     };
