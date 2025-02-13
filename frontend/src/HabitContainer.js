@@ -116,12 +116,12 @@ const HabitContainer = () => {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4" bg-orange>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Habit Tracker</h1>
+        <h1 className="text-2xl font-bold text-gray-200">Habit Tracker</h1>
         <button
           onClick={addHabit}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+          className="bg-habit-orange hover:bg-opacity-80 text-white px-4 py-2 rounded"
         >
           Add New Habit
         </button>
@@ -129,16 +129,16 @@ const HabitContainer = () => {
 
       <div className="space-y-4">
         {habits.map((habit) => (
-          <div key={habit._id} className="bg-white p-3 rounded-lg shadow">
+          <div key={habit._id} className="bg-dark-card p-3 rounded-lg border-habit-orange">
             <div className="flex justify-between items-center mb-2">
               <HabitName habit={habit} onNameChange={updateHabitName} />
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-gray-600">
+                <span className="text-sm font-semibold text-gray-400">
                   Streak: {calculateStreak(habit.completedDates)} days
                 </span>
                 <button
                   onClick={() => deleteHabit(habit._id)}
-                  className="text-sm text-red-600 hover:underline"
+                  className="text-sm text-red-400 hover:text-red-300"
                 >
                   Delete
                 </button>

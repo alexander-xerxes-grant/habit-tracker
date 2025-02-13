@@ -34,9 +34,9 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     const container = d3.select(heatmapRef.current);
     container.selectAll('*').remove();
 
-    const squareSize = 12;
-    const padding = 1.5;
-    const monthPadding = 12;
+    const squareSize = 18;
+    const padding = 2.5;
+    const monthPadding = 20;
     const daysInWeek = 7;
 
     // Define a constant for the corner radius ratio
@@ -335,7 +335,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
   }, [completedDates, onCompleteDay]);
 
   return (
-    <div className="p-2 bg-gray-100 rounded shadow">
+    <div className="p-2 rounded shadow">
       <div ref={heatmapRef} className="heatmap-container"></div>
     </div>
   );
