@@ -106,11 +106,10 @@ const HabitContainer = () => {
         name: newName,
       });
 
-      setHabits(prevHabits =>
-        prevHabits.map(h => h._id === habitId ? { ...h, name: newName } : h)
+      setHabits((prevHabits) =>
+        prevHabits.map((h) => (h._id === habitId ? { ...h, name: newName } : h))
       );
-    }
-    catch (error) {
+    } catch (error) {
       console.error('Error updating habit name:', error);
       alert('Failed to update habit name. Please try again.');
     }
@@ -131,10 +130,7 @@ const HabitContainer = () => {
       <div className="space-y-8">
         {habits.map((habit) => (
           <div key={habit._id} className="bg-white p-4 rounded-lg shadow">
-            <HabitName 
-  habit={habit}
-  onNameChange={updateHabitName}
-/>
+            <HabitName habit={habit} onNameChange={updateHabitName} />
             <button
               onClick={() => deleteHabit(habit._id)}
               className="text-sm text-red-600 hover:underline"

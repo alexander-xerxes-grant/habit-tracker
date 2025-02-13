@@ -148,13 +148,15 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       const day1 = square1.day % 7;
       const week2 = Math.floor(square2.day / 7);
       const day2 = square2.day % 7;
-      
+
       // Calculate direct distance in grid units
       const dx = week2 - week1;
       const dy = day2 - day1;
-      
+
       const distance = Math.sqrt(dx * dx + dy * dy);
-      console.log(`Distance from day ${square1.day} to ${square2.day}: ${distance}`);
+      console.log(
+        `Distance from day ${square1.day} to ${square2.day}: ${distance}`
+      );
       return distance;
     };
 
@@ -209,52 +211,52 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
         return thisSquareDayNumber === nowDayNumber ? 2 : 0;
       })
 
-      .on('click', function(event, d) {
+      .on('click', function (event, d) {
         hideTooltip();
-      
+
         const clickedDate = new Date(2025, 0, d.day + 1);
         const clickedDayNumber = Math.floor(clickedDate.getTime() / 86400000);
-      
+
         if (clickedDayNumber > nowDayNumber) {
           return;
         }
-      
+
         const clickedSquare = d;
-      
+
         // Select all squares and apply a more visible ripple effect
-        svg.selectAll('.day-square')
-          .each(function(squareData) {
-            const distance = calculateSquareDistance(clickedSquare, squareData);
-            
-            if (distance <= MAX_RIPPLE_DISTANCE) {
-              const delay = distance * (RIPPLE_DURATION / MAX_RIPPLE_DISTANCE);
-              
-              d3.select(this)
-                .transition()
-                .delay(delay)
-                .duration(600)
-                // Add transform scale for more visible effect
-                .attr('transform', `scale(1.2)`)
-                .style('fill', '#ff9f43') // Bright orange color for visibility
-                .transition()
-                .duration(200)
-                .attr('transform', 'scale(1)')
-                .style('fill', function() {
-                  const thisSquareDate = new Date(2025, 0, squareData.day + 1);
-                  const thisSquareDayNumber = Math.floor(
-                    thisSquareDate.getTime() / 86400000
-                  );
-      
-                  if (thisSquareDayNumber > nowDayNumber) {
-                    return 'rgba(0, 0, 0, 0.05)';
-                  }
-                  
-                  const isCompleted = completedDayNumbers.includes(thisSquareDayNumber);
-                  return isCompleted ? RIPPLE_COLOR : 'rgba(0, 0, 0, 0.2)';
-                });
-            }
-          });
-      
+        svg.selectAll('.day-square').each(function (squareData) {
+          const distance = calculateSquareDistance(clickedSquare, squareData);
+
+          if (distance <= MAX_RIPPLE_DISTANCE) {
+            const delay = distance * (RIPPLE_DURATION / MAX_RIPPLE_DISTANCE);
+
+            d3.select(this)
+              .transition()
+              .delay(delay)
+              .duration(600)
+              // Add transform scale for more visible effect
+              .attr('transform', `scale(1.2)`)
+              .style('fill', '#ff9f43') // Bright orange color for visibility
+              .transition()
+              .duration(200)
+              .attr('transform', 'scale(1)')
+              .style('fill', function () {
+                const thisSquareDate = new Date(2025, 0, squareData.day + 1);
+                const thisSquareDayNumber = Math.floor(
+                  thisSquareDate.getTime() / 86400000
+                );
+
+                if (thisSquareDayNumber > nowDayNumber) {
+                  return 'rgba(0, 0, 0, 0.05)';
+                }
+
+                const isCompleted =
+                  completedDayNumbers.includes(thisSquareDayNumber);
+                return isCompleted ? RIPPLE_COLOR : 'rgba(0, 0, 0, 0.2)';
+              });
+          }
+        });
+
         onCompleteDay(clickedDate);
       })
 

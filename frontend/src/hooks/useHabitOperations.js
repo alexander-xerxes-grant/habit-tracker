@@ -32,4 +32,4 @@ export const useHabitOperations = () => {
   };
 
   return { addHabit, updateHabit, deleteHabit };
-}; 
+};

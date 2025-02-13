@@ -32,5 +32,5 @@ export const habitService = {
     await fetch(`${BASE_URL}/habits/${id}`, {
       method: 'DELETE',
     });
-  }
-}; 
+  },
+};

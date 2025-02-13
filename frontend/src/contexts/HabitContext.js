@@ -7,11 +7,11 @@ const habitReducer = (state, action) => {
     case 'ADD_HABIT':
       return [...state, action.payload];
     case 'UPDATE_HABIT':
-      return state.map(habit => 
+      return state.map((habit) =>
         habit.id === action.payload.id ? action.payload : habit
       );
     case 'DELETE_HABIT':
-      return state.filter(habit => habit.id !== action.payload);
+      return state.filter((habit) => habit.id !== action.payload);
     default:
       return state;
   }
@@ -27,4 +27,4 @@ export const HabitProvider = ({ children }) => {
   );
 };
 
-export const useHabits = () => useContext(HabitContext); 
+export const useHabits = () => useContext(HabitContext);
