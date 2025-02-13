@@ -116,7 +116,7 @@ const HabitContainer = () => {
   };
 
   return (
-    <div className="p-4 space-y-4" bg-orange>
+    <div className="p-4 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-gray-200">Habit Tracker</h1>
         <button
@@ -129,7 +129,10 @@ const HabitContainer = () => {
 
       <div className="space-y-4">
         {habits.map((habit) => (
-          <div key={habit._id} className="bg-dark-card p-3 rounded-lg border-habit-orange">
+          <div
+            key={habit._id}
+            className="bg-dark-card p-3 rounded-lg border-habit-orange"
+          >
             <div className="flex justify-between items-center mb-2">
               <HabitName habit={habit} onNameChange={updateHabitName} />
               <div className="flex items-center gap-4">

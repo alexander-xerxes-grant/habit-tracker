@@ -15,7 +15,9 @@ const HabitName = ({ habit, onNameChange }) => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
         <div className="bg-habit-dark-card p-6 rounded-lg shadow-lg border border-habit-orange">
           <form onSubmit={handleSubmit}>
-            <h3 className="text-lg font-bold mb-4 text-gray-200">Edit Habit Name</h3>
+            <h3 className="text-lg font-bold mb-4 text-gray-200">
+              Edit Habit Name
+            </h3>
             <input
               type="text"
               value={editedName}

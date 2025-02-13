@@ -96,7 +96,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       .attr('text-anchor', 'middle')
       .attr('font-size', 10)
       .attr('fill', '#6b7280')
-      .text(d => d);
+      .text((d) => d);
 
     // Calculate "today" for reference
     const today = new Date();

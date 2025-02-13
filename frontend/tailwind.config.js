@@ -12,7 +12,7 @@ module.exports = {
           DEFAULT: '#1C1C1C',
           card: '#242424',
           deeper: '#0A0A0A',
-        }
+        },
       },
     },
   },
