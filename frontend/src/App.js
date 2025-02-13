@@ -1,10 +1,13 @@
 import HabitContainer from './HabitContainer';
+import { HabitProvider } from './contexts/HabitContext';
 
 function App() {
   return (
-    <div className="App">
-      <HabitContainer />
-    </div>
+    <HabitProvider>
+      <div className="App">
+        <HabitContainer />
+      </div>
+    </HabitProvider>
   );
 }
 

@@ -102,7 +102,7 @@ const HabitContainer = () => {
 
   const updateHabitName = async (habitId, newName) => {
     try {
-      const response = await axios.put(`${API_URL}/${habitId}`, {
+      await axios.put(`${API_URL}/${habitId}`, {
         name: newName,
       });
 
