@@ -116,8 +116,8 @@ const HabitContainer = () => {
   };
 
   return (
-    <div className="p-6 space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="p-4 space-y-4">
+      <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Habit Tracker</h1>
         <button
           onClick={addHabit}
@@ -127,20 +127,22 @@ const HabitContainer = () => {
         </button>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-4">
         {habits.map((habit) => (
-          <div key={habit._id} className="bg-white p-4 rounded-lg shadow">
-            <HabitName habit={habit} onNameChange={updateHabitName} />
-            <button
-              onClick={() => deleteHabit(habit._id)}
-              className="text-sm text-red-600 hover:underline"
-            >
-              Delete
-            </button>
-            <div className="mt-2">
-              <span className="text-sm font-semibold text-gray-600">
-                Streak: {calculateStreak(habit.completedDates)} days
-              </span>
+          <div key={habit._id} className="bg-white p-3 rounded-lg shadow">
+            <div className="flex justify-between items-center mb-2">
+              <HabitName habit={habit} onNameChange={updateHabitName} />
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-gray-600">
+                  Streak: {calculateStreak(habit.completedDates)} days
+                </span>
+                <button
+                  onClick={() => deleteHabit(habit._id)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
             <div key={`heatmap-${habit._id}`}>
               <Heatmap

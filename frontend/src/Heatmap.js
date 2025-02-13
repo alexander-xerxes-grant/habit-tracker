@@ -34,13 +34,13 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     const container = d3.select(heatmapRef.current);
     container.selectAll('*').remove();
 
-    const squareSize = 15;
-    const padding = 2;
-    const monthPadding = 15;
+    const squareSize = 12;
+    const padding = 1.5;
+    const monthPadding = 12;
     const daysInWeek = 7;
 
     // Define a constant for the corner radius ratio
-    const CORNER_RADIUS_RATIO = 0.2; // 20% of square size
+    const CORNER_RADIUS_RATIO = 0.15;
 
     // Calculate corner radius based on square size
     const calculateCornerRadius = (size) => {
@@ -71,11 +71,32 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     const width = totalWeeks * (squareSize + padding) + 11 * monthPadding;
     const height = daysInWeek * (squareSize + padding);
 
-    // Append SVG
+    // Append SVG with extra space on the left for day initials
+    const dayInitialsWidth = 16;
     const svg = container
       .append('svg')
-      .attr('width', width)
-      .attr('height', height + 30);
+      .attr('width', width + dayInitialsWidth)
+      .attr('height', height + 25);
+
+    // Create a group for the main content and translate it to make room for day initials
+    const mainGroup = svg
+      .append('g')
+      .attr('transform', `translate(${dayInitialsWidth}, 0)`);
+
+    // Add day initials
+    const dayInitials = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    svg
+      .selectAll('.day-initial')
+      .data(dayInitials)
+      .enter()
+      .append('text')
+      .attr('class', 'day-initial')
+      .attr('x', 6)
+      .attr('y', (d, i) => i * (squareSize + padding) + squareSize * 0.75)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', 10)
+      .attr('fill', '#6b7280')
+      .text(d => d);
 
     // Calculate "today" for reference
     const today = new Date();
@@ -161,7 +182,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
     };
 
     // Draw the squares
-    svg
+    mainGroup
       .selectAll('.day-square')
       .data(data)
       .enter()
@@ -224,7 +245,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
         const clickedSquare = d;
 
         // Select all squares and apply a more visible ripple effect
-        svg.selectAll('.day-square').each(function (squareData) {
+        mainGroup.selectAll('.day-square').each(function (squareData) {
           const distance = calculateSquareDistance(clickedSquare, squareData);
 
           if (distance <= MAX_RIPPLE_DISTANCE) {
@@ -289,19 +310,19 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
       const monthWeeks = Math.ceil((month.firstDayOfWeek + month.days) / 7);
       const monthWidth = monthWeeks * (squareSize + padding);
 
-      svg
+      mainGroup
         .append('text')
         .attr('x', currentX + monthWidth / 2)
-        .attr('y', height + 20)
+        .attr('y', height + 16)
         .attr('text-anchor', 'middle')
-        .attr('font-size', 12)
+        .attr('font-size', 10)
         .attr('fill', '#6b7280')
         .text(month.name);
 
       // optional: add lines between months if you want them
       if (i < months.length - 1) {
         // You might need to create a line, not set x1 on the svg itself
-        // so let’s skip for clarity or adjust it properly.
+        // so let's skip for clarity or adjust it properly.
       }
 
       currentX += monthWidth + monthPadding;
@@ -314,7 +335,7 @@ const Heatmap = ({ completedDates, onCompleteDay }) => {
   }, [completedDates, onCompleteDay]);
 
   return (
-    <div className="p-4 bg-gray-100 rounded shadow">
+    <div className="p-2 bg-gray-100 rounded shadow">
       <div ref={heatmapRef} className="heatmap-container"></div>
     </div>
   );
