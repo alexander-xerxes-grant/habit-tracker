@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Heatmap from './Heatmap';
+import HabitName from './components/HabitName';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api/habits';
@@ -99,6 +100,22 @@ const HabitContainer = () => {
     }
   };
 
+  const updateHabitName = async (habitId, newName) => {
+    try {
+      const response = await axios.put(`${API_URL}/${habitId}`, {
+        name: newName,
+      });
+
+      setHabits(prevHabits =>
+        prevHabits.map(h => h._id === habitId ? { ...h, name: newName } : h)
+      );
+    }
+    catch (error) {
+      console.error('Error updating habit name:', error);
+      alert('Failed to update habit name. Please try again.');
+    }
+  };
+
   return (
     <div className="p-6 space-y-8">
       <div className="flex justify-between items-center">
@@ -113,18 +130,11 @@ const HabitContainer = () => {
 
       <div className="space-y-8">
         {habits.map((habit) => (
-          <div key={habit.id} className="bg-white p-4 rounded-lg shadow">
-            <input
-              type="text"
-              value={habit.name}
-              onChange={(e) => {
-                const updatedHabits = habits.map((h) =>
-                  h.id === habit.id ? { ...h, name: e.target.value } : h
-                );
-                setHabits(updatedHabits);
-              }}
-              className="text-xl font-semibold mb-4 p-2 border rounded"
-            />
+          <div key={habit._id} className="bg-white p-4 rounded-lg shadow">
+            <HabitName 
+  habit={habit}
+  onNameChange={updateHabitName}
+/>
             <button
               onClick={() => deleteHabit(habit._id)}
               className="text-sm text-red-600 hover:underline"
@@ -136,7 +146,7 @@ const HabitContainer = () => {
                 Streak: {calculateStreak(habit.completedDates)} days
               </span>
             </div>
-            <div key={`heatmap-${habit.id}`}>
+            <div key={`heatmap-${habit._id}`}>
               <Heatmap
                 habitId={habit._id}
                 completedDates={habit.completedDates}
